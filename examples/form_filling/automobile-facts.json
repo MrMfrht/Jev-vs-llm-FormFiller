@@ -1,0 +1,14 @@
+{
+  "vehicle.make": "Toyota",
+  "vehicle.engine_performance_kw": 110,
+  "vehicle.date_of_manufacture_mm_dd_yyyy": "05/12/2021",
+  "vehicle.number_of_seats": 5,
+  "vehicle.fuel_type": "Petrol",
+  "vehicle.list_price_usd": 28000,
+  "vehicle.license_plate_number": "DEMO482",
+  "vehicle.annual_mileage_mi": 12000,
+  "vehicle.exterior_color": "Blue",
+  "vehicle.vin": "DEMO-VIN-NOT-FOR-USE",
+  "applicant.favorite_music": "Jazz",
+  "applicant.favorite_dessert": "Apple pie"
+}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Alder Bank | Treasury onboarding</title>
+<style>
+body{max-width:62rem;margin:3rem auto;font:16px/1.5 system-ui;background:#faf8f1;color:#163d40}
+fieldset{margin:1rem 0;border:1px solid #91a7a3;border-radius:.5rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));gap:.8rem;padding:1rem}
+legend,h1{font-family:Georgia,serif}label{display:grid}input,select,textarea{font:inherit;padding:.25rem}iframe{width:100%}
+</style><h1>Alder Bank</h1><p>Treasury onboarding · synthetic training application</p>
+<form id="onboarding"><div id="people"></div>
+<fieldset><legend>Standing transfer instructions</legend>
+<label>Receiving bank country<select id="country"><option></option><option>Canada</option><option>Chile</option></select></label>
+<label>Receiving bank branch<select id="branch" disabled><option></option></select></label>
+<label>Statement delivery channels<select id="handling" multiple><option>Paperless inbox</option><option>Email notice</option><option>Postal mail</option></select></label>
+<label>Enable international transfers<input type="checkbox" id="after"></label>
+<label>FX authorization reference<input id="permit" disabled></label>
+<label>Remittance narrative<textarea id="notes"></textarea></label>
+<label>First settlement date<input type="date" id="departure"></label>
+<label>System reference<input readonly value="KYC-LOCKED" id="locked"></label>
+</fieldset><div id="seal"></div><iframe title="Correspondent bank" id="broker"></iframe>
+<h2>Beneficiary register</h2><div id="payees"></div></form>
+<script>
+const people=document.querySelector('#people'),payees=document.querySelector('#payees');
+for(const [i,role] of ['Primary account holder','Joint account holder','Authorized signer','Alternate authorized signer'].entries()){
+ people.insertAdjacentHTML('beforeend',`<fieldset><legend>${role}</legend>
+ <label>Full name<input id="p${i}n"></label><label>Email<input type="email" id="p${i}e"></label>
+ <label>Confirm email<input type="email" id="p${i}c"></label></fieldset>`);
+}
+country.onchange=()=>{branch.disabled=!country.value;branch.innerHTML=country.value==='Canada'?'<option></option><option>Halifax</option>':'<option></option><option>Valparaíso</option>'};
+after.onchange=()=>permit.disabled=!after.checked;
+document.querySelector('#seal').attachShadow({mode:'open'}).innerHTML='<fieldset><legend>Settlement account</legend><label>Internal clearing account<input id="clearingAccount"></label></fieldset>';
+broker.srcdoc='<fieldset><legend>Correspondent bank</legend><label>Intermediary BIC<input id="bic"></label></fieldset>';
+for(let i=1;i<=48;i++){
+ const tag=String(i).padStart(3,'0');
+ const section=document.createElement('fieldset');
+ section.innerHTML=`<legend>Beneficiary ${tag}</legend>`;
+ for(const [j,label] of ['Account number','Clearing code','Mandate reference','Payment reference','Settlement currency','Intermediary override'].entries()){
+  const id=`b${tag}_${j}`;
+  section.insertAdjacentHTML('beforeend',`<label>${label}<input id="${id}" ${j<4?'name="'+id+'"':''}></label>`);
+ }
+ payees.append(section);
+}
+</script></html>
