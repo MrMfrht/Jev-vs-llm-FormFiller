@@ -9,7 +9,7 @@ Two "brains" can do the matching, and you pick one with a setting:
 
 Whichever you choose, the values typed into the form are always **exact copies of your facts**. Nothing is invented or reworded.
 
-How each brain works, and why Jev costs more, is explained in plain words in [docs/architecture.md](docs/architecture.md).
+**How it works:** see [the architecture page](docs/architecture.md) for how each brain fills a form, and why Jev costs more, in plain words.
 
 ## Contents
 
@@ -22,6 +22,7 @@ How each brain works, and why Jev costs more, is explained in plain words in [do
 7. [Settings](#settings)
 8. [Reading the output](#reading-the-output)
 9. [Tests and troubleshooting](#tests-and-troubleshooting)
+10. [Architecture: how each brain works](docs/architecture.md) (separate page)
 
 ## Setup
 
@@ -140,7 +141,7 @@ Times are from a round in which every request was answered. When the connection 
 ### What the numbers say
 
 - **Accuracy:** both are good. The LLM was perfect on all seven forms, in every round. Jev's only misses are in the visa form's three identical "Companion" sections, where it puts a neighbouring field's value in some fields (a date of birth in a passport box, for example) and leaves others empty. It was 83–100% confident about the wrong picks, so the confidence check can't catch them. It also once missed a multi-select value that scored 0.79 against the old 0.8 bar; the bar is now 0.6, since correct values scored 0.75–0.98 across our runs and wrong ones never above 0.04.
-- **Cost:** about the same on small forms, and the LLM pulls ahead as forms grow: 1.3× cheaper on the job application, 16× on the banking form. Jev is asked one question per field and every question carries a copy of the whole fact list, so its cost grows with fields × facts. The LLM reads the fields and facts once.
+- **Cost:** about the same on small forms, and the LLM pulls ahead as forms grow: 1.3× cheaper on the job application, 16× on the banking form. Jev is asked one question per field and every question carries a copy of the whole fact list, so its cost grows with fields × facts. The LLM reads the fields and facts once. The [architecture page](docs/architecture.md) explains this step by step.
 - **Time:** Jev is faster per form when the connection behaves, 2–3 s against 3–7 s, because it answers in parallel and writes nothing. On the 310-field form it's 12 s against 16 s.
 - **Calls:** every form is one matching pass. Fields that are disabled until another field is filled (country → province, a checkbox that unlocks a reference box) are asked about in the same request and written once they unlock. The LLM makes exactly 1 call per form; Jev makes 1 to 9 depending on the form's size.
 - **What Jev still offers:** a confidence score for every field, and a built-in guarantee that it can only pick one of your facts. The LLM gets the same guarantee from a check we do afterwards: a value that isn't an exact copy of a fact is reported, never written.
