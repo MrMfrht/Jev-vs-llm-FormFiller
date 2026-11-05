@@ -1,274 +1,225 @@
 # Fine Print Detective: form filler
 
-The form filler matches the facts in a JSON file to the fields of a web form, fills them in, and reads each value back to verify it. It is built on Playwright and Jev, a decision model on OpenRouter.
+Give it a web form and a JSON file of facts about a person. It fills the form in and checks every value it typed.
 
-Jev only **chooses from given options**. It never writes text, so every value typed into the form comes verbatim from your facts file.
+Two "brains" can do the matching, and you pick one with a setting:
 
-There are **no command-line flags**. The command always runs the full process, and every setting comes from `.env`. For a short summary of when Jev is a good fit, see [docs/jev-for-form-filling.md](docs/jev-for-form-filling.md).
+- **Jev**: a decision model that picks which fact goes in each field, and says how confident it is.
+- **LLM**: a chat model (GPT-6 Luna) that reads all the fields and facts at once and returns a fill plan.
+
+Whichever you choose, the values typed into the form are always **exact copies of your facts**. Nothing is invented or reworded.
 
 ## Contents
 
 1. [Setup](#setup)
-2. [Minimal `.env`](#minimal-env)
-3. [Configuration](#configuration)
-4. [Repository layout](#repository-layout)
-5. [How it works](#how-it-works)
-6. [Facts file](#facts-file)
-7. [Matching](#matching)
-8. [Writing and verifying](#writing-and-verifying)
-9. [Results](#results)
-10. [Limits](#limits)
-11. [Testing](#testing)
-12. [Troubleshooting](#troubleshooting)
+2. [Try it: watch a form get filled](#try-it-watch-a-form-get-filled)
+3. [The seven test forms](#the-seven-test-forms)
+4. [Results: Jev vs LLM](#results-jev-vs-llm)
+5. [Videos](#videos)
+6. [Your own form](#your-own-form)
+7. [Settings](#settings)
+8. [Reading the output](#reading-the-output)
+9. [Tests and troubleshooting](#tests-and-troubleshooting)
 
 ## Setup
 
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+You need Python 3.12+, [uv](https://docs.astral.sh/uv/) and an [OpenRouter](https://openrouter.ai/) API key.
 
 ```powershell
-uv sync
-copy .env.example .env               # add your OpenRouter key and form settings
-uv run playwright install chromium   # or set PLAYWRIGHT_CHANNEL=msedge
-uv run python -m form_filling        # fill the form (billed)
+git clone https://github.com/MrMfrht/fine-print-detective.git
+cd fine-print-detective
+uv sync                              # install dependencies
+uv run playwright install chromium   # install the browser (or set PLAYWRIGHT_CHANNEL=msedge in .env)
+copy .env.example .env               # then open .env and paste your key into OPEN_ROUTER_API_KEY
 ```
 
-The filler fills the current step of `FORM_URL` and never submits it. The banking benchmark, `uv run python -m examples.form_filling.banking.check` (also billed), fills a 310-field synthetic form and compares the result with `expected.json`.
+Every run calls a model through your key. The costs below are what each run actually cost; the most expensive single form was about 3 cents.
 
-## Minimal `.env`
+## Try it: watch a form get filled
 
-You only need three or four lines. Every other setting has a default. After editing `.env`, run `uv run python -m form_filling`. Add `BROWSER_WATCH=true` to watch the browser fill the form.
+`.env.example` already points at a public demo form (the Tricentis insurance app, "Automobile" step), so after adding your key you can run:
 
-### A public URL
-
-This uses the Tricentis demo insurance app, Automobile step. `.env.example` already contains these values.
-
-```dotenv
-OPEN_ROUTER_API_KEY=sk-or-v1-...
-FORM_URL=https://sampleapp.tricentis.com/101/app.php
-FORM_OPEN_LINK=Automobile
-FORM_FACTS=examples/form_filling/automobile-facts.json
+```powershell
+uv run python -m form_filling
 ```
 
-In a live run, all 8 vehicle fields were matched and verified with 1 Jev call, for $0.0002. The facts file also has 4 facts that match no field, and these are ignored. The site's search box stays empty.
+To watch the browser do it, set `BROWSER_WATCH=true` in `.env`. The browser opens, the fields fill in, and it waits for you to press Enter before closing.
 
-### A local HTML page
+To switch brains, set `FORM_MATCHER=jev` or `FORM_MATCHER=llm` in `.env` and run again.
 
-This uses the banking test form in this repository.
+### Record a video
 
-```dotenv
-OPEN_ROUTER_API_KEY=sk-or-v1-...
-FORM_URL=file:///C:/path/to/fine-print-detective/examples/form_filling/banking/form.html
-FORM_FACTS=examples/form_filling/banking/facts.json
+Run `uv run playwright install ffmpeg` once. Then set `BROWSER_VIDEO_DIR=artifacts/videos` and the browser records each run, at full speed, as a `.webm` file (the path is printed at the end). For example, to record Jev and then the LLM filling the medical-intake form:
+
+```powershell
+$env:BROWSER_WATCH="true"; $env:BROWSER_VIDEO_DIR="artifacts/videos"
+$env:BENCHMARK_FORMS="medical_intake"
+$env:BENCHMARK_MATCHERS="jev"; uv run python -m examples.form_filling.benchmark.run
+$env:BENCHMARK_MATCHERS="llm"; uv run python -m examples.form_filling.benchmark.run
 ```
 
-- `FORM_URL` must be an absolute `file:///` URL. On macOS or Linux it looks like `file:///home/me/…`. Spaces in the path work either as is or written as `%20`.
-- `FORM_FACTS` can be relative to the repository root.
-- This fills the form and prints the results. To also score the result against `expected.json`, run `uv run python -m examples.form_filling.banking.check`, which needs only the API key.
+The run prints one JSON row per field and ends with a summary line like:
 
-### Your own form
+```
+llm calls: 1, 889 input + 148 output tokens, $0.0002. Statuses: {'matched': 8, 'unmatched': 1}
+```
 
-1. Point `FORM_URL` at the page.
-2. Write a facts file (see [Facts file](#facts-file)) and point `FORM_FACTS` at it.
-3. If the form is only reachable through a link, add `FORM_OPEN_LINK` with that link's exact text.
+## The seven test forms
 
-## Configuration
+All the forms below are included in the repository, with their facts and the expected final values, so you can run them yourself.
 
-[`settings.py`](settings.py) reads these variables at startup. A variable set in your shell overrides `.env`. A missing or invalid value stops the command with a message naming the variable.
-
-| Variable | Default | Purpose |
+| Form | Fields | What makes it tricky |
 | --- | --- | --- |
-| `OPEN_ROUTER_API_KEY` | required | OpenRouter key (`OPENROUTER_API_KEY` also works) |
-| `FORM_URL` | required | Page with the form (`file:///…` works) |
-| `FORM_FACTS` | required | Facts JSON file, relative to the repository root |
-| `FORM_OPEN_LINK` | none | Exact name of a link to click before inspecting |
-| `FORM_CONCURRENCY` | `4` | Jev requests sent at the same time |
-| `FORM_FACTS_PER_REQUEST` | unset (254) | Caps the facts per request; never more than 254 |
-| `FORM_TOKEN_BUDGET` | `100000` | Max estimated tokens per request |
-| `FORM_MULTI_SELECT_THRESHOLD` | `0.8` | Multi-select: minimum yes-probability for a fact to be selected |
-| `FORM_SINGLE_VALUE_MIN_CONFIDENCE` | `0.6` | Single-value: a pick below this becomes `needs_review` and isn't written (`0` disables) |
-| `BROWSER_WATCH` | `false` | `true` shows the browser and waits for Enter at the end |
-| `PLAYWRIGHT_CHANNEL` | Chromium | Installed browser to use instead, e.g. `msedge` |
+| Tricentis Automobile (public website) | 8 | A real site with a search box that must stay empty, and 4 facts that match nothing |
+| Job application | 16 | A confirm-email field, a datalist, decoys about a previous employer |
+| Medical intake | 24 | Four people with identical labels (name, phone, email), `false` checkboxes, a field that unlocks after a checkbox |
+| Checkout | 27 | Shipping vs billing with identical labels, country → province dropdowns, a custom dropdown, a password field |
+| Visa application | 38 | Three numbered "Companion" sections with identical labels (one left empty), a 40-country list |
+| Conference registration | 21 | Two multi-selects (one a custom widget), similar labels (L vs XL), facts with no field |
+| Banking | 310 | 48 repeated beneficiary blocks, an iframe, a shadow root, decoy facts, dependent fields |
 
-Whole numbers must be at least 1, and thresholds must be between 0 and 1. Booleans accept `true/false`, `1/0`, `yes/no` and `on/off`.
+### Run the five generated forms
 
-## Repository layout
+This fills all five with **both** brains, scores each against the expected values, and prints a comparison table. It costs about a cent in total.
 
-| Path | Contents |
-| --- | --- |
-| `settings.py` | All `.env` settings |
-| `form_filling/` | `inspection/` (field inventory), `matching/` (Jev requests), `execution/` (write and verify), all driven by `workflow.py` |
-| `browser/` | Browser launch (`session.py`), shared with the rest of the repository |
-| `open_router/` | OpenRouter HTTP client (`client.py`) and Jev limits |
-| `examples/form_filling/` | Fact files and the banking benchmark |
-| `docs/` | [Pros and cons of Jev for form filling](docs/jev-for-form-filling.md) |
-| `tests/` | unittest suite |
-
-## How it works
-
-**Process:** inspect the form → exact-name matches → build Jev requests → bind fields → ask Jev → resolve → write and verify → repeat for newly enabled fields.
-
-**Output:** stdout gets a JSON row per field, or one row per selected fact for multi-selects. The last line on stderr is a summary like `Jev calls: N, T input tokens, $C. Statuses: {'matched': …}`, using the token counts and cost that OpenRouter reports.
-
-From Python:
-
-```python
-from browser.session import browser_page
-from form_filling.matching.requests import read_facts
-from form_filling.workflow import run_form_step
-
-with browser_page() as page:
-    page.goto("https://example.test/form")
-    result = run_form_step(page, read_facts({"email": "a@b.test"}), concurrency=4)
-    print(result.decision_calls, result.cost, result.records)
+```powershell
+uv run python -m examples.form_filling.benchmark.run
 ```
 
-To get only the field inventory (read-only), call `FormInspector().inspect(page)` from `form_filling`.
+Narrow it down with environment variables (in `.env` or on the command line):
 
-## Facts file
+| Setting | Example | Effect |
+| --- | --- | --- |
+| `BENCHMARK_FORMS` | `visa_application` or `checkout,medical_intake` | Only these forms |
+| `BENCHMARK_MATCHERS` | `jev` or `llm` | Only this brain |
+| `BROWSER_WATCH` | `true` | Show the browser and pause after each form |
 
-```json
-{ "vehicle.make": "Toyota", "seats": 5, "newsletter": true, "delivery": ["Email notice", "Paperless inbox"] }
+For example, to watch the LLM fill the visa form:
+
+```powershell
+$env:BENCHMARK_FORMS="visa_application"; $env:BENCHMARK_MATCHERS="llm"; $env:BROWSER_WATCH="true"
+uv run python -m examples.form_filling.benchmark.run
 ```
 
-| Value | Result |
+The form names are `job_application`, `medical_intake`, `checkout`, `visa_application` and `conference_registration`.
+
+### Run the banking form
+
+```powershell
+uv run python -m examples.form_filling.banking.check
+```
+
+It uses `FORM_MATCHER` from `.env`, honours `BROWSER_WATCH`, and prints `Correct final values: 310/310` at the end.
+
+### Run the public demo form
+
+That's the `uv run python -m form_filling` command from the section above.
+
+## Results: Jev vs LLM
+
+Each form was filled once by each brain and scored against the expected values. Time covers inspecting the form, matching and writing (not starting the browser). Cost is what OpenRouter billed for a first run of that form.
+
+| Form | Fields | Jev | | | LLM | | |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| | | **correct** | **cost** | **time** | **correct** | **cost** | **time** |
+| Tricentis Automobile | 8 | 8/8 | $0.0002 | ~4 s | 8/8 | $0.0002 | ~3 s |
+| Job application | 16 | 16/16 | $0.0004 | 2 s | 16/16 | $0.0003 | 6 s |
+| Medical intake | 24 | 24/24 | $0.0009 | 3 s | 24/24 | $0.0004 | 6 s |
+| Checkout | 27 | 27/27 | $0.0008 | 3 s | 27/27 | $0.0004 | 6 s |
+| Visa application | 38 | **31/38** | $0.0019 | 3 s | 38/38 | $0.0006 | 7 s |
+| Conference registration | 21 | 21/21 | $0.0008 | 2 s | 21/21 | $0.0004 | 6 s |
+| Banking | 310 | 310/310 | $0.0262 | 12 s | 310/310 | $0.0016 | 16 s |
+| **Total** | **444** | **437/444 (98.4%)** | **$0.0312** | **29 s** | **444/444 (100%)** | **$0.0039** | **50 s** |
+
+Times are from a round in which every request was answered. When the connection to OpenRouter drops a request, it is sent again after `MODEL_TIMEOUT_SECONDS`, and the run takes that much longer.
+
+### What the numbers say
+
+- **Accuracy:** both are good. The LLM was perfect on all seven forms, in every round. Jev's only misses are in the visa form's three identical "Companion" sections, where it puts a neighbouring field's value in some fields (a date of birth in a passport box, for example) and leaves others empty. It was 83–100% confident about the wrong picks, so the confidence check can't catch them. It also once missed a multi-select value that scored 0.79 against the old 0.8 bar; the bar is now 0.6, since correct values scored 0.75–0.98 across our runs and wrong ones never above 0.04.
+- **Cost:** about the same on small forms, and the LLM pulls ahead as forms grow: 1.3× cheaper on the job application, 16× on the banking form. Jev is asked one question per field and every question carries a copy of the whole fact list, so its cost grows with fields × facts. The LLM reads the fields and facts once.
+- **Time:** Jev is faster per form when the connection behaves, 2–3 s against 3–7 s, because it answers in parallel and writes nothing. On the 310-field form it's 12 s against 16 s.
+- **Calls:** every form is one matching pass. Fields that are disabled until another field is filled (country → province, a checkbox that unlocks a reference box) are asked about in the same request and written once they unlock. The LLM makes exactly 1 call per form; Jev makes 1 to 9 depending on the form's size.
+- **What Jev still offers:** a confidence score for every field, and a built-in guarantee that it can only pick one of your facts. The LLM gets the same guarantee from a check we do afterwards: a value that isn't an exact copy of a fact is reported, never written.
+
+One run per form is a small sample. Run both on your own form before choosing. For a plain-language summary of when Jev is worth it, see [docs/jev-for-form-filling.md](docs/jev-for-form-filling.md).
+
+## Videos
+
+Both brains filling the medical-intake form (24 fields: four people with identical labels, a multi-select, `false` checkboxes, and a field that unlocks after a checkbox). Click a link and GitHub plays the video.
+
+| Video | Result |
 | --- | --- |
-| String, number, boolean | One candidate fact |
-| List | One candidate per item (used for multi-selects) |
-| Empty string, object, empty file | Rejected |
-| Fact matching no field | Ignored |
-| One fact fitting several fields (email + confirm email) | Used for each field |
+| [Jev fills the medical-intake form](docs/videos/medical-intake-jev.webm) | 24/24 correct, 2 calls, $0.0009, 3.9 s |
+| [The LLM fills the medical-intake form](docs/videos/medical-intake-llm.webm) | 24/24 correct, 1 call, $0.0002, 7.3 s |
 
-Facts are numbered `q1, q2, …` in file order. When a form covers several people, name each fact after its owner (`co-owner email`).
+The empty form sits for a few seconds while the model thinks, then every field fills in a burst, then the unlocked field fills. To record your own, see [Record a video](#record-a-video).
 
-## Matching
+## Your own form
 
-### Which fields are matched
+1. Point `FORM_URL` at the page (a `file:///C:/...` path works for a local HTML file).
+2. Write a facts file and point `FORM_FACTS` at it:
 
-| Field | Handling |
-| --- | --- |
-| HTML `name` equals a fact key, both unique, single-value | Matched locally with no Jev call (`match_method: exact_name`) |
-| Other visible, enabled, editable fields | Asked to Jev |
-| Disabled, hidden, read-only | Skipped now; matched later if they become editable |
-| Password, file | Never matched |
+   ```json
+   {
+     "applicant full name": "Dalia Haddad",
+     "applicant email": "dalia.haddad@example.com",
+     "willing to relocate": true,
+     "dietary requirements": ["Vegetarian", "Nut allergy"]
+   }
+   ```
 
-### How Jev is asked
+   Use a list when a multi-select should get several values. Name facts after their owner ("co-owner email") when the form covers several people. Facts that match no field are simply ignored.
+3. If the form is only reachable through a link, set `FORM_OPEN_LINK` to that link's exact text.
+4. Run `uv run python -m form_filling`.
 
-| Field type | Question | Jev returns | Decision |
-| --- | --- | --- | --- |
-| Single-value | One `choice` per field; the options are the facts plus `no_match` | The winner and its `confidence` | Written if confidence ≥ `FORM_SINGLE_VALUE_MIN_CONFIDENCE`, otherwise `needs_review` |
-| Multi-select | One `noul` per (field, fact); each fact's text appears once in `state` | A yes-probability per fact | Every fact ≥ `FORM_MULTI_SELECT_THRESHOLD` is selected |
+The filler fills the current page only. It never clicks Next or Submit.
 
-A `choice` question's probabilities add up to 1, so the facts compete. That's right when only one can win. `noul` scores each fact independently, so several can pass. Jev answers all of a request's questions in one call.
+## Settings
 
-`state` is billed once per request, but each question carries and pays for its own copy of its options. So a single-value field costs about **20–30 tokens per fact**.
+All settings live in `.env`. A setting also present in your shell overrides the file.
 
-### Number of facts (255-option limit)
-
-Each question offers the facts plus `no_match`, so a request holds at most **254 facts**.
-
-| Facts | Requests per field | Example groups |
+| Setting | Default | Meaning |
 | --- | --- | --- |
-| ≤ 254 | 1 | 80 → `[80]`, 254 → `[254]` |
-| > 254 | `ceil(facts / 254)` balanced groups | 255 → `[128, 127]`, 600 → `[200, 200, 200]` |
-| Any, with `FORM_FACTS_PER_REQUEST=K` | `ceil(facts / min(K, 254))` | 600 with K=100 → 6 × `[100]` |
+| `OPEN_ROUTER_API_KEY` | required | Your OpenRouter key |
+| `FORM_URL` | required | The page with the form |
+| `FORM_FACTS` | required | The facts JSON file |
+| `FORM_OPEN_LINK` | none | A link to click before looking for the form |
+| `FORM_MATCHER` | `jev` | `jev` or `llm` |
+| `FORM_LLM_MODEL` | `openai/gpt-6-luna` | Chat model used when `FORM_MATCHER=llm` |
+| `BROWSER_WATCH` | `false` | `true` shows the browser and pauses before closing it |
+| `BROWSER_SLOW_MO_MS` | `0` | Pause after each browser action, in ms, so a watched run is easy to follow |
+| `BROWSER_VIDEO_DIR` | unset | Save a 1280×720 `.webm` video of each run into this folder |
+| `MODEL_TIMEOUT_SECONDS` | `30` | How long to wait for a Jev answer before sending the request again (the LLM gets double, at least 60 s) |
+| `PLAYWRIGHT_CHANNEL` | Chromium | Use an installed browser instead, e.g. `msedge` |
+| `FORM_CONCURRENCY` | `4` | Model requests sent at the same time |
+| `FORM_MULTI_SELECT_THRESHOLD` | `0.6` | Jev only: how sure it must be to tick a multi-select value |
+| `FORM_SINGLE_VALUE_MIN_CONFIDENCE` | `0.6` | Jev only: below this, a pick is reported instead of written |
+| `FORM_TOKEN_BUDGET` | `100000` | Largest request before it's split into smaller ones |
+| `FORM_FACTS_PER_REQUEST` | unset | Jev only: cap on facts per request (at most 254) |
 
-When facts are split into groups, each group can nominate a fact for the same single-value field:
+## Reading the output
 
-| Nominations | Result |
-| --- | --- |
-| 0 | `unmatched` |
-| 1 | Written if its confidence passes the minimum |
-| 2 or more | A follow-up request compares only the nominees; the winner's confidence must pass the minimum |
-| Comparison exceeds 254 nominees or the token budget | `needs_review` with `candidate_ids` |
-
-Multi-select questions have no option list, so the 254 limit doesn't apply. All facts go in one request unless `FORM_FACTS_PER_REQUEST` is set.
-
-### Request size (token budget)
-
-Many fields share a request, and each field repeats the fact list, so a request grows with fields × facts. Jev has no public tokenizer or token-count endpoint, so the size is estimated: the JSON is counted with tiktoken `cl100k_base`, plus **12 tokens per `choice` option** for Jev's own formatting. That figure was fitted to billed usage, and estimates land within about ±3% of the billed count on real requests.
-
-| Estimated size | Action |
-| --- | --- |
-| ≤ `FORM_TOKEN_BUDGET` (100k) | Sent as is |
-| Over, more than 1 field | Fields split in half, repeated until each half fits |
-| Over, 1 field, more than 1 fact | Facts split in half |
-| Over, 1 field and 1 fact | Error: shorten the fact or raise the budget |
-
-The banking benchmark (310 fields, 79 facts) comes to 48 exact-name matches, 8 requests of ~77k tokens for 258 fields, and 1 multi-select request.
-
-### Concurrency
-
-| Requests | Behaviour |
-| --- | --- |
-| ≤ `FORM_CONCURRENCY` | All sent at once |
-| More | Sent in waves of `FORM_CONCURRENCY`; follow-up comparisons share the same limit |
-
-Network timeouts are retried up to 3 times (90 s each), but a single HTTP error such as a 429 rate limit aborts the whole run. Raise the concurrency carefully.
-
-## Writing and verifying
-
-Fields are bound to their DOM elements **before** Jev is called. If a field re-renders in the meantime, its write is refused.
-
-| Field kind | Write | Verified by |
-| --- | --- | --- |
-| text, textarea, number, date, email, tel, url, month, time, week, datetime-local | Fill, then blur | Exact readback, browser validity, not `aria-invalid` |
-| Native checkbox | Check/uncheck; **needs a boolean fact** | Checked state |
-| Native `<select>` | The unique enabled option whose label or value equals the fact; a multi-select keeps existing selections | Selected options read back |
-| `<datalist>` input | The unique matching suggestion | Readback |
-| ARIA combobox/listbox | Open, search, scan up to 30 scrolls / 5 s, click or Enter | Shown label or `aria-selected` within 1 s |
-| Radio, switch, slider, contenteditable, search | Not written | `skipped` |
-
-After a verified write, the page is re-inspected. Fields that just became editable are matched and filled, and this repeats until nothing new appears (e.g. country → branch list).
-
-The filler handles one step at a time and never clicks Next or Submit. It can't see closed shadow roots, canvas, or custom dropdowns that expose no options.
-
-## Results
+Each row has a `status`:
 
 | Status | Meaning |
 | --- | --- |
-| `matched` | Written and verified; `detail` shows the value and `confidence` shows Jev's score (absent for exact-name matches) |
-| `unmatched` | No fact fits |
-| `needs_review` | Low confidence, ambiguous, or unverified (duplicate options, re-rendered field, failed readback); see `detail` |
-| `unavailable` | No enabled `<select>` option has that label or value |
-| `skipped` | The field kind has no writer |
+| `matched` | Typed in and verified. `detail` shows the value as it now appears. |
+| `unmatched` | No fact fits this field, so it was left alone. |
+| `needs_review` | Something was unsure: Jev wasn't confident enough, a value wasn't an exact copy of a fact, two options had the same label, or the value didn't pass the field's own validation. Nothing was written. |
+| `unavailable` | A dropdown has no option with that value. |
+| `skipped` | This kind of field isn't supported yet (radio buttons, sliders, switches). |
 
-Live benchmark (banking, jev-1.14): **310/310 correct**, 6 Jev calls, about $0.03.
+The last line sums up the calls, tokens and cost, taken from what OpenRouter reports.
 
-## Limits
+## Tests and troubleshooting
 
-| Value | Setting | Controls |
-| --- | --- | --- |
-| 255 options | constant | Choices per Jev question |
-| 254 facts | `FORM_FACTS_PER_REQUEST` (cap) | Facts per request |
-| 100,000 tokens | `FORM_TOKEN_BUDGET` | Request size |
-| 4 | `FORM_CONCURRENCY` | Parallel requests |
-| 0.8 / 0.6 | `FORM_MULTI_SELECT_THRESHOLD` / `FORM_SINGLE_VALUE_MIN_CONFIDENCE` | Multi-select cut-off / single-value confidence floor |
-| 12 s | constant | Wait for a stable form inventory |
-| 5 s / 30 scrolls | constant | Custom dropdown search |
-| 90 s × 3 | constant | Jev request timeout × attempts |
-| 45 s | constant | Page load |
+`uv run python -m unittest discover -s tests` runs the offline tests. They mock the models and use a local browser, so they're free.
 
-## Testing
-
-`uv run python -m unittest discover -s tests` makes no network calls; model responses are mocked. Most tests use a local Chromium.
-
-| File | Covers |
+| Problem | Fix |
 | --- | --- |
-| `test_form_inspector.py` | Field inventory, frames, shadow roots |
-| `test_form_requests.py` | Fact groups, token splits, comparisons, concurrency, thresholds |
-| `test_form_dropdowns.py` | Writing and verifying every field kind, dependent fields |
-| `test_settings.py` | `.env` parsing and defaults |
-
-## Troubleshooting
-
-| Message | Fix |
-| --- | --- |
-| `Set FORM_URL in .env …` | Add the named variable (see `.env.example`) |
-| `… must be a whole number …` | Use an integer ≥ 1 |
-| `.env` value ignored | The variable is also set in your shell, which wins |
-| `One fact and field exceed the request budget` | Shorten the fact or raise `FORM_TOKEN_BUDGET` |
+| `Set FORM_URL in .env …` | Add that setting to `.env` |
+| It looks stuck | It's waiting for a model answer. Compare the "sent" and "answered" lines to see which request is missing. Jev occasionally never answers; after `MODEL_TIMEOUT_SECONDS` (30 s) the request is sent again, up to 3 times. |
+| Many `needs_review` rows | Read each row's `detail`. For Jev, try lowering the two threshold settings. |
+| A multi-select misses a value with Jev | Lower `FORM_MULTI_SELECT_THRESHOLD`. Correct values have scored 0.75–0.98 in our runs and wrong ones at most 0.04. |
 | `OpenRouter … returned HTTP 429` | Lower `FORM_CONCURRENCY` |
-| Many `needs_review` rows saying confidence is below the minimum | Lower `FORM_SINGLE_VALUE_MIN_CONFIDENCE`, or make fact names clearer |
-| Multi-select misses a value | Lower `FORM_MULTI_SELECT_THRESHOLD` |
-| Other `needs_review` rows | Read each row's `detail` |
-| Browser won't launch | `uv run playwright install chromium` or set `PLAYWRIGHT_CHANNEL` |
+| The browser won't start | `uv run playwright install chromium`, or set `PLAYWRIGHT_CHANNEL=msedge` |

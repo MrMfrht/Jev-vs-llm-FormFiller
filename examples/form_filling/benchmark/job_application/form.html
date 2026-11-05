@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Job application | benchmark fixture</title>
+<style>body{max-width:60rem;margin:2rem auto;font:15px/1.4 system-ui}fieldset{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.6rem;margin:.8rem 0}label{display:grid}[role=listbox]{border:1px solid #999;padding:.3rem}[role=option]{padding:.2rem .4rem;cursor:pointer}[role=option][aria-selected=true]{background:#cde}</style>
+<h1>Job application</h1><p>Synthetic benchmark fixture. Not a real form.</p>
+<form id="job_application">
+<fieldset><legend>Applicant</legend><label>Full name<input type="text" id="name"></label><label>Email<input type="email" id="email"></label><label>Confirm email<input type="email" id="email2"></label><label>Phone<input type="tel" id="phone"></label><label>LinkedIn profile<input type="url" id="linkedin"></label><label>Portfolio website<input type="url" id="portfolio"></label></fieldset>
+<fieldset><legend>Position</legend><label>Position applied for<select id="position"><option></option><option>Backend Engineer</option><option>Frontend Engineer</option><option>Data Analyst</option><option>Product Designer</option></select></label><label>Earliest start date<input type="date" id="start"></label><label>Desired annual salary (CAD)<input type="number" id="salary" min="0"></label><label>Years of professional experience<input type="number" id="years" min="0"></label><label>Authorized to work in Canada<select id="authorized"><option></option><option>Yes</option><option>No</option></select></label><label>Willing to relocate<input type="checkbox" id="relocate"></label><label>How did you hear about us?<input id="source" list="sources"></label><datalist id="sources"><option value="LinkedIn"><option value="Indeed"><option value="A friend"><option value="Other"></datalist></fieldset>
+<fieldset><legend>Experience</legend><label>Current or most recent employer<input type="text" id="employer"></label><label>Current or most recent job title<input type="text" id="title"></label><label>Cover letter<textarea id="cover"></textarea></label></fieldset>
+</form>
+<script>
+const PROVINCES = {"Canada": ["British Columbia", "Ontario", "Quebec"], "United States": ["California", "Texas"], "Germany": ["Bavaria", "Berlin"]};
+for (const el of document.querySelectorAll('[data-country]')) {
+  const target = document.getElementById(el.dataset.country);
+  el.onchange = () => {
+    const items = PROVINCES[el.value] || [];
+    target.innerHTML = '<option></option>' + items.map(i => `<option>${i}</option>`).join('');
+    target.disabled = !items.length;
+  };
+}
+for (const el of document.querySelectorAll('[data-enables]')) {
+  el.onchange = () => { document.getElementById(el.dataset.enables).disabled = !el.checked; };
+}
+for (const box of document.querySelectorAll('[data-combobox]')) {
+  const menu = document.getElementById(box.getAttribute('aria-controls'));
+  box.onclick = () => { menu.hidden = false; box.setAttribute('aria-expanded', 'true'); };
+  for (const option of menu.children) option.onclick = () => {
+    for (const other of menu.children) other.setAttribute('aria-selected', String(other === option));
+    box.textContent = option.textContent; menu.hidden = true; box.setAttribute('aria-expanded', 'false');
+  };
+}
+for (const list of document.querySelectorAll('[data-multilistbox]')) {
+  for (const option of list.children) option.onclick = () =>
+    option.setAttribute('aria-selected', String(option.getAttribute('aria-selected') !== 'true'));
+}
+</script></html>

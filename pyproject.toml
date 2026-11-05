@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "playwright>=1.50,<2",
+    "pydantic>=2.14.2",
     "python-dotenv>=1,<2",
     "tiktoken>=0.14.0",
 ]

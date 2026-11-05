@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Conference registration | benchmark fixture</title>
+<style>body{max-width:60rem;margin:2rem auto;font:15px/1.4 system-ui}fieldset{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.6rem;margin:.8rem 0}label{display:grid}[role=listbox]{border:1px solid #999;padding:.3rem}[role=option]{padding:.2rem .4rem;cursor:pointer}[role=option][aria-selected=true]{background:#cde}</style>
+<h1>Conference registration</h1><p>Synthetic benchmark fixture. Not a real form.</p>
+<form id="conference_registration">
+<fieldset><legend>Attendee</legend><label>Full name<input type="text" id="name"></label><label>Email<input type="email" id="email"></label><label>Organization<input type="text" id="org"></label><label>Job title<input type="text" id="title"></label><label>Country<select id="country"><option></option><option>Argentina</option><option>Australia</option><option>Austria</option><option>Belgium</option><option>Brazil</option><option>Canada</option><option>Chile</option><option>China</option><option>Colombia</option><option>Denmark</option><option>Egypt</option><option>Finland</option><option>France</option><option>Germany</option><option>Greece</option><option>India</option><option>Indonesia</option><option>Ireland</option><option>Italy</option><option>Japan</option><option>Jordan</option><option>Kenya</option><option>Lebanon</option><option>Mexico</option><option>Morocco</option><option>Netherlands</option><option>New Zealand</option><option>Nigeria</option><option>Norway</option><option>Peru</option><option>Poland</option><option>Portugal</option><option>South Africa</option><option>South Korea</option><option>Spain</option><option>Sweden</option><option>Switzerland</option><option>Thailand</option><option>Turkey</option><option>United Kingdom</option><option>United States</option><option>Vietnam</option></select></label><label>Profile URL<input type="url" id="profile"></label><label>Ticket type<select id="ticket"><option></option><option>Student</option><option>Standard</option><option>Premium</option><option>Speaker</option></select></label><label>T-shirt size<select id="size"><option></option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select></label><label>Dietary requirements<select id="diet" multiple><option>Vegetarian</option><option>Vegan</option><option>Gluten-free</option><option>Halal</option><option>Kosher</option><option>Nut allergy</option></select></label><span id="sessionsLabel">Sessions to attend</span><div role="listbox" id="sessions" aria-labelledby="sessionsLabel" aria-multiselectable="true" tabindex="0" data-check data-multilistbox><div role="option" aria-selected="false">Opening keynote</div><div role="option" aria-selected="false">Workshop A: Testing</div><div role="option" aria-selected="false">Workshop B: Security</div><div role="option" aria-selected="false">Closing panel</div></div><label>Accessibility needs<textarea id="access"></textarea></label></fieldset>
+<fieldset><legend>Travel</legend><label>Arrival date<input type="date" id="arrive"></label><label>Departure date<input type="date" id="depart"></label><label>I need hotel accommodation<input type="checkbox" id="hotel"></label><label>Number of accompanying guests<input type="number" id="guests" min="0"></label></fieldset>
+<fieldset><legend>Emergency contact</legend><label>Full name<input type="text" id="e_name"></label><label>Phone<input type="tel" id="e_phone"></label></fieldset>
+<fieldset><legend>Invoice</legend><label>Company name<input type="text" id="inv_company"></label><label>VAT number<input type="text" id="inv_vat"></label><label>Billing address<input type="text" id="inv_address"></label><label>Promo code<input type="text" id="promo"></label></fieldset>
+</form>
+<script>
+const PROVINCES = {"Canada": ["British Columbia", "Ontario", "Quebec"], "United States": ["California", "Texas"], "Germany": ["Bavaria", "Berlin"]};
+for (const el of document.querySelectorAll('[data-country]')) {
+  const target = document.getElementById(el.dataset.country);
+  el.onchange = () => {
+    const items = PROVINCES[el.value] || [];
+    target.innerHTML = '<option></option>' + items.map(i => `<option>${i}</option>`).join('');
+    target.disabled = !items.length;
+  };
+}
+for (const el of document.querySelectorAll('[data-enables]')) {
+  el.onchange = () => { document.getElementById(el.dataset.enables).disabled = !el.checked; };
+}
+for (const box of document.querySelectorAll('[data-combobox]')) {
+  const menu = document.getElementById(box.getAttribute('aria-controls'));
+  box.onclick = () => { menu.hidden = false; box.setAttribute('aria-expanded', 'true'); };
+  for (const option of menu.children) option.onclick = () => {
+    for (const other of menu.children) other.setAttribute('aria-selected', String(other === option));
+    box.textContent = option.textContent; menu.hidden = true; box.setAttribute('aria-expanded', 'false');
+  };
+}
+for (const list of document.querySelectorAll('[data-multilistbox]')) {
+  for (const option of list.children) option.onclick = () =>
+    option.setAttribute('aria-selected', String(option.getAttribute('aria-selected') !== 'true'));
+}
+</script></html>

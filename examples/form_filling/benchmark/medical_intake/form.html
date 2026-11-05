@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Medical intake | benchmark fixture</title>
+<style>body{max-width:60rem;margin:2rem auto;font:15px/1.4 system-ui}fieldset{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.6rem;margin:.8rem 0}label{display:grid}[role=listbox]{border:1px solid #999;padding:.3rem}[role=option]{padding:.2rem .4rem;cursor:pointer}[role=option][aria-selected=true]{background:#cde}</style>
+<h1>Medical intake</h1><p>Synthetic benchmark fixture. Not a real form.</p>
+<form id="medical_intake">
+<fieldset><legend>Patient</legend><label>Full name<input type="text" id="p_name"></label><label>Date of birth<input type="date" id="p_dob"></label><label>Email<input type="email" id="p_email"></label><label>Phone<input type="tel" id="p_phone"></label><label>Sex<select id="p_sex"><option></option><option>Female</option><option>Male</option><option>Other</option><option>Prefer not to say</option></select></label><label>Blood type<select id="p_blood"><option></option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></label><label>Height (cm)<input type="number" id="p_height"></label><label>Weight (kg)<input type="number" id="p_weight"></label><label>Known allergies<select id="p_allergies" multiple><option>Penicillin</option><option>Latex</option><option>Peanuts</option><option>Shellfish</option><option>Aspirin</option></select></label><label>Current medications<textarea id="p_meds"></textarea></label><label>Smoker<input type="checkbox" id="p_smoker"></label></fieldset>
+<fieldset><legend>Emergency contact</legend><label>Full name<input type="text" id="e_name"></label><label>Relationship to patient<select id="e_rel"><option></option><option>Spouse</option><option>Parent</option><option>Child</option><option>Sibling</option><option>Friend</option></select></label><label>Phone<input type="tel" id="e_phone"></label><label>Email<input type="email" id="e_email"></label></fieldset>
+<fieldset><legend>Primary physician</legend><label>Full name<input type="text" id="d_name"></label><label>Clinic<input type="text" id="d_clinic"></label><label>Phone<input type="tel" id="d_phone"></label></fieldset>
+<fieldset><legend>Insurance</legend><label>Patient has health insurance<input type="checkbox" id="i_has" data-enables="i_policy"></label><label>Insurance provider<select id="i_provider"><option></option><option>Sun Life</option><option>Manulife</option><option>Blue Cross</option><option>Other</option></select></label><label>Policy number<input type="text" id="i_policy" disabled></label><label>Group number<input type="text" id="i_group"></label></fieldset>
+<fieldset><legend>Consent</legend><label>I consent to treatment<input type="checkbox" id="c_treat"></label><label>I consent to sharing my data with research partners<input type="checkbox" id="c_share"></label></fieldset>
+</form>
+<script>
+const PROVINCES = {"Canada": ["British Columbia", "Ontario", "Quebec"], "United States": ["California", "Texas"], "Germany": ["Bavaria", "Berlin"]};
+for (const el of document.querySelectorAll('[data-country]')) {
+  const target = document.getElementById(el.dataset.country);
+  el.onchange = () => {
+    const items = PROVINCES[el.value] || [];
+    target.innerHTML = '<option></option>' + items.map(i => `<option>${i}</option>`).join('');
+    target.disabled = !items.length;
+  };
+}
+for (const el of document.querySelectorAll('[data-enables]')) {
+  el.onchange = () => { document.getElementById(el.dataset.enables).disabled = !el.checked; };
+}
+for (const box of document.querySelectorAll('[data-combobox]')) {
+  const menu = document.getElementById(box.getAttribute('aria-controls'));
+  box.onclick = () => { menu.hidden = false; box.setAttribute('aria-expanded', 'true'); };
+  for (const option of menu.children) option.onclick = () => {
+    for (const other of menu.children) other.setAttribute('aria-selected', String(other === option));
+    box.textContent = option.textContent; menu.hidden = true; box.setAttribute('aria-expanded', 'false');
+  };
+}
+for (const list of document.querySelectorAll('[data-multilistbox]')) {
+  for (const option of list.children) option.onclick = () =>
+    option.setAttribute('aria-selected', String(option.getAttribute('aria-selected') !== 'true'));
+}
+</script></html>

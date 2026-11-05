@@ -1,0 +1,18 @@
+{
+  "name": "Dalia Haddad",
+  "email": "dalia.haddad@example.com",
+  "email2": "dalia.haddad@example.com",
+  "phone": "+1 416 555 0133",
+  "linkedin": "https://linkedin.example/in/daliahaddad",
+  "portfolio": "https://dalia.example.org",
+  "position": "Data Analyst",
+  "start": "2026-12-01",
+  "salary": "95000",
+  "years": "6",
+  "authorized": "Yes",
+  "relocate": true,
+  "source": "LinkedIn",
+  "employer": "Northwind Analytics",
+  "title": "Senior Analyst",
+  "cover": "I build dashboards that teams actually use. At Northwind I cut report turnaround from a week to a day by replacing hand-made spreadsheets with a shared data model."
+}

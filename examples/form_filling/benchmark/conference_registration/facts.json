@@ -1,0 +1,32 @@
+{
+  "attendee full name": "Sofia Bergstrom",
+  "attendee email": "sofia.b@example.se",
+  "attendee organization": "Lumen Studios",
+  "attendee job title": "Lead Engineer",
+  "attendee country": "Sweden",
+  "attendee profile URL": "https://sofia.example.se",
+  "ticket type": "Standard",
+  "t-shirt size": "XL",
+  "dietary requirements": [
+    "Vegetarian",
+    "Nut allergy"
+  ],
+  "sessions to attend": [
+    "Workshop B: Security",
+    "Closing panel"
+  ],
+  "accessibility needs": "Step-free access to the stage, please.",
+  "arrival date": "2027-05-11",
+  "departure date": "2027-05-14",
+  "needs hotel accommodation": true,
+  "number of accompanying guests": 1,
+  "emergency contact full name": "Erik Bergstrom",
+  "emergency contact phone": "+46 70 555 0133",
+  "invoice company name": "Lumen Studios AB",
+  "invoice VAT number": "SE556677889901",
+  "invoice billing address": "Vasagatan 10, 111 20 Stockholm",
+  "attendee former organization": "Kestrel Aviation",
+  "accompanying guest full name": "Linnea Bergstrom",
+  "attendee t-shirt size last year": "L",
+  "attendee favorite session last year": "Opening keynote"
+}

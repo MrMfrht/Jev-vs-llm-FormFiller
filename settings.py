@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent
 MEMORY_MODELS = ("jev", "luna")
+MATCHERS = ("jev", "llm")
 ANSWER_MODES = ("summary", "extract")
 
 load_dotenv(ROOT / ".env")
@@ -36,8 +37,8 @@ def _int(name: str, default: int | None) -> int | None:
         number = int(value)
     except ValueError:
         raise ValueError(f"{name} must be a whole number, not {value!r}.") from None
-    if number < 1:
-        raise ValueError(f"{name} must be at least 1.")
+    if number < (0 if name == "BROWSER_SLOW_MO_MS" else 1):
+        raise ValueError(f"{name} must be at least {0 if name == 'BROWSER_SLOW_MO_MS' else 1}.")
     return number
 
 
@@ -77,9 +78,25 @@ def _path(name: str, default: str | None = None) -> Path:
     return path if path.is_absolute() else ROOT / path
 
 
+def model_timeout() -> int:
+    """Seconds to wait for one model answer before retrying. Jev normally answers in under 5 s."""
+    return _int("MODEL_TIMEOUT_SECONDS", 30)
+
+
 def browser_watch() -> bool:
     """BROWSER_WATCH=true shows the browser window and waits for Enter at the end."""
     return _bool("BROWSER_WATCH")
+
+
+def browser_slow_mo() -> int:
+    """Milliseconds to pause after each browser action, so a watched run is easy to follow. 0 disables."""
+    value = _text("BROWSER_SLOW_MO_MS")
+    return 0 if value is None else _int("BROWSER_SLOW_MO_MS", 0)
+
+
+def browser_video_dir() -> Path | None:
+    """Folder for a .webm recording of each run, or None for no recording."""
+    return _path("BROWSER_VIDEO_DIR") if _text("BROWSER_VIDEO_DIR") else None
 
 
 def reader_url() -> str:
@@ -94,15 +111,19 @@ def finder_memory() -> str:
 @dataclass(frozen=True)
 class MatchingSettings:
     """Keyword arguments for form_filling.workflow.run_form_step."""
+    matcher: str = "jev"
+    llm_model: str = "openai/gpt-6-luna"
     concurrency: int = 4
     facts_per_request: int | None = None
     token_budget: int = 100_000
-    multi_select_threshold: float = 0.8
+    multi_select_threshold: float = 0.6
     single_value_min_confidence: float = 0.6
 
     @classmethod
     def from_env(cls) -> "MatchingSettings":
         return cls(
+            matcher=_choice("FORM_MATCHER", cls.matcher, MATCHERS),
+            llm_model=_text("FORM_LLM_MODEL") or cls.llm_model,
             concurrency=_int("FORM_CONCURRENCY", cls.concurrency),
             facts_per_request=_int("FORM_FACTS_PER_REQUEST", None),
             token_budget=_int("FORM_TOKEN_BUDGET", cls.token_budget),

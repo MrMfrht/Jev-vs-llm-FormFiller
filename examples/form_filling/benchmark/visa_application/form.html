@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Visa application | benchmark fixture</title>
+<style>body{max-width:60rem;margin:2rem auto;font:15px/1.4 system-ui}fieldset{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.6rem;margin:.8rem 0}label{display:grid}[role=listbox]{border:1px solid #999;padding:.3rem}[role=option]{padding:.2rem .4rem;cursor:pointer}[role=option][aria-selected=true]{background:#cde}</style>
+<h1>Visa application</h1><p>Synthetic benchmark fixture. Not a real form.</p>
+<form id="visa_application">
+<fieldset><legend>Applicant</legend><label>Surname<input type="text" id="a_surname"></label><label>Given names<input type="text" id="a_given"></label><label>Date of birth<input type="date" id="a_dob"></label><label>Nationality<select id="a_nat"><option></option><option>Argentina</option><option>Australia</option><option>Austria</option><option>Belgium</option><option>Brazil</option><option>Canada</option><option>Chile</option><option>China</option><option>Colombia</option><option>Denmark</option><option>Egypt</option><option>Finland</option><option>France</option><option>Germany</option><option>Greece</option><option>India</option><option>Indonesia</option><option>Ireland</option><option>Italy</option><option>Japan</option><option>Jordan</option><option>Kenya</option><option>Lebanon</option><option>Mexico</option><option>Morocco</option><option>Netherlands</option><option>New Zealand</option><option>Nigeria</option><option>Norway</option><option>Peru</option><option>Poland</option><option>Portugal</option><option>South Africa</option><option>South Korea</option><option>Spain</option><option>Sweden</option><option>Switzerland</option><option>Thailand</option><option>Turkey</option><option>United Kingdom</option><option>United States</option><option>Vietnam</option></select></label><label>Passport number<input type="text" id="a_passport"></label><label>Passport issue date<input type="date" id="a_issued"></label><label>Passport expiry date<input type="date" id="a_expiry"></label><label>Email<input type="email" id="a_email"></label><label>Phone<input type="tel" id="a_phone"></label><label>Occupation<input type="text" id="a_job"></label><label>Employer<input type="text" id="a_employer"></label><label>Purpose of visit<select id="a_purpose"><option></option><option>Tourism</option><option>Business</option><option>Study</option><option>Family visit</option></select></label><label>Intended arrival date<input type="date" id="a_arrive"></label><label>Intended departure date<input type="date" id="a_depart"></label><label>Address during the stay<textarea id="a_address"></textarea></label><label>Countries visited in the last five years<select id="a_visited" multiple><option>Australia</option><option>Brazil</option><option>Canada</option><option>China</option><option>Egypt</option><option>France</option><option>Germany</option><option>India</option><option>Italy</option><option>Japan</option><option>Mexico</option><option>Morocco</option><option>South Africa</option><option>South Korea</option><option>Spain</option><option>Thailand</option><option>Turkey</option><option>United Kingdom</option><option>United States</option><option>Vietnam</option></select></label><label>Previously refused a visa<input type="checkbox" id="a_refused"></label><label>Criminal record<input type="checkbox" id="a_record"></label></fieldset>
+<fieldset><legend>Companion 1</legend><label>Surname<input type="text" id="c1_surname"></label><label>Given names<input type="text" id="c1_given"></label><label>Date of birth<input type="date" id="c1_dob"></label><label>Relationship to applicant<select id="c1_rel"><option></option><option>Spouse</option><option>Child</option><option>Parent</option><option>Friend</option></select></label><label>Passport number<input type="text" id="c1_passport"></label></fieldset>
+<fieldset><legend>Companion 2</legend><label>Surname<input type="text" id="c2_surname"></label><label>Given names<input type="text" id="c2_given"></label><label>Date of birth<input type="date" id="c2_dob"></label><label>Relationship to applicant<select id="c2_rel"><option></option><option>Spouse</option><option>Child</option><option>Parent</option><option>Friend</option></select></label><label>Passport number<input type="text" id="c2_passport"></label></fieldset>
+<fieldset><legend>Companion 3</legend><label>Surname<input type="text" id="c3_surname"></label><label>Given names<input type="text" id="c3_given"></label><label>Date of birth<input type="date" id="c3_dob"></label><label>Relationship to applicant<select id="c3_rel"><option></option><option>Spouse</option><option>Child</option><option>Parent</option><option>Friend</option></select></label><label>Passport number<input type="text" id="c3_passport"></label></fieldset>
+<fieldset><legend>Sponsor in the destination country</legend><label>Full name<input type="text" id="s_name"></label><label>Phone<input type="tel" id="s_phone"></label><label>Address<textarea id="s_address"></textarea></label></fieldset>
+<fieldset><legend>Emergency contact</legend><label>Full name<input type="text" id="e_name"></label><label>Phone<input type="tel" id="e_phone"></label></fieldset>
+</form>
+<script>
+const PROVINCES = {"Canada": ["British Columbia", "Ontario", "Quebec"], "United States": ["California", "Texas"], "Germany": ["Bavaria", "Berlin"]};
+for (const el of document.querySelectorAll('[data-country]')) {
+  const target = document.getElementById(el.dataset.country);
+  el.onchange = () => {
+    const items = PROVINCES[el.value] || [];
+    target.innerHTML = '<option></option>' + items.map(i => `<option>${i}</option>`).join('');
+    target.disabled = !items.length;
+  };
+}
+for (const el of document.querySelectorAll('[data-enables]')) {
+  el.onchange = () => { document.getElementById(el.dataset.enables).disabled = !el.checked; };
+}
+for (const box of document.querySelectorAll('[data-combobox]')) {
+  const menu = document.getElementById(box.getAttribute('aria-controls'));
+  box.onclick = () => { menu.hidden = false; box.setAttribute('aria-expanded', 'true'); };
+  for (const option of menu.children) option.onclick = () => {
+    for (const other of menu.children) other.setAttribute('aria-selected', String(other === option));
+    box.textContent = option.textContent; menu.hidden = true; box.setAttribute('aria-expanded', 'false');
+  };
+}
+for (const list of document.querySelectorAll('[data-multilistbox]')) {
+  for (const option of list.children) option.onclick = () =>
+    option.setAttribute('aria-selected', String(option.getAttribute('aria-selected') !== 'true'));
+}
+</script></html>

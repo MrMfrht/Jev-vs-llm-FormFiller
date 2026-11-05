@@ -1,0 +1,32 @@
+{
+  "patient full name": "Omar Nakamura",
+  "patient date of birth": "1979-11-02",
+  "patient email": "omar.nakamura@example.com",
+  "patient phone": "+1 604 555 0188",
+  "patient sex": "Male",
+  "patient blood type": "AB-",
+  "patient height cm": 178,
+  "patient weight kg": 81,
+  "patient known allergies": [
+    "Penicillin",
+    "Shellfish"
+  ],
+  "patient current medications": "Metformin 500 mg twice daily; Atorvastatin 20 mg nightly",
+  "patient is a smoker": false,
+  "emergency contact full name": "Yuki Nakamura",
+  "emergency contact relationship to patient": "Spouse",
+  "emergency contact phone": "+1 604 555 0190",
+  "emergency contact email": "yuki.n@example.com",
+  "primary physician full name": "Dr. Lena Moreau",
+  "primary physician clinic": "Cedar Ridge Clinic",
+  "primary physician phone": "+1 604 555 0101",
+  "patient has health insurance": true,
+  "insurance provider": "Manulife",
+  "insurance policy number": "MNL-884201",
+  "insurance group number": "G-5521",
+  "patient consents to treatment": true,
+  "patient consents to sharing data with research partners": false,
+  "patient former phone": "+1 604 555 0007",
+  "patient previous physician": "Dr. Raj Patel",
+  "patient childhood allergy, since outgrown": "Latex"
+}

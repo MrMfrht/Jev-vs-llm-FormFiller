@@ -11,17 +11,25 @@ from urllib.request import Request, urlopen
 
 from dotenv import load_dotenv
 
+import settings
+
 
 class OpenRouterError(RuntimeError):
     """The API request failed or the service returned an invalid response."""
 
 
 def request_decision(payload: dict) -> dict:
-    return _post("alpha/decisions", payload, timeout=90, attempts=3)
+    # Jev occasionally never answers a request; a short timeout plus retries keeps the run moving.
+    return _post("alpha/decisions", payload, timeout=settings.model_timeout(), attempts=3)
 
 
-def request_chat(payload: dict) -> dict:
-    return _post("v1/chat/completions", payload)
+def request_chat(payload: dict, *, timeout: int = 30, attempts: int = 1) -> dict:
+    return _post("v1/chat/completions", payload, timeout=timeout, attempts=attempts)
+
+
+def request_fill_plan(payload: dict) -> dict:
+    """A chat request whose answer can be long; wait at least a minute, and retry a hung connection."""
+    return request_chat(payload, timeout=max(60, 2 * settings.model_timeout()), attempts=3)
 
 
 def _post(endpoint: str, payload: dict, *, timeout: int = 30, attempts: int = 1) -> dict:
@@ -46,8 +54,8 @@ def _post(endpoint: str, payload: dict, *, timeout: int = 30, attempts: int = 1)
             transient = isinstance(cause, (TimeoutError, ConnectionError, IncompleteRead))
             if not transient or attempt == attempts:
                 raise OpenRouterError(f"OpenRouter {endpoint} failed on attempt {attempt}: {cause}") from exc
-            logging.getLogger(__name__).warning("OpenRouter %s: %s. Retrying request (%d/%d).",
-                                                endpoint, cause, attempt + 1, attempts)
+            logging.getLogger(__name__).warning("OpenRouter %s: no answer after %d s (%s). Retrying request (%d/%d).",
+                                                endpoint, timeout, cause, attempt + 1, attempts)
             sleep(2 ** (attempt - 1))
         except ValueError as exc:
             raise OpenRouterError("OpenRouter returned invalid JSON.") from exc

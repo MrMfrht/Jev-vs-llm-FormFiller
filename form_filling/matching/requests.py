@@ -51,7 +51,8 @@ def compact_field(field: Field) -> str:
         if hint and hint not in parts:
             parts.append(hint[:240])
     if field.options and len(field.options) <= 10:
-        parts.append("choices: " + ", ".join(o.label[:80] for o in field.options if not o.disabled and not o.hidden))
+        parts.append("choices: " + ", ".join((o.label or o.value or "")[:80] for o in field.options
+                                              if not o.disabled and not o.hidden and (o.label or o.value)))
     return " | ".join(parts)
 
 
@@ -103,17 +104,28 @@ def estimated_input_tokens(request: dict) -> int:
     return len(tiktoken.get_encoding("cl100k_base").encode_ordinary(payload)) + CHOICE_OPTION_TOKENS * options
 
 
-def eligible_fields(documents):
+DEFERRED_NOTE = "currently disabled; it may unlock after other fields are filled"
+
+
+def eligible_fields(documents, *, include_deferred: bool = False):
+    """Fields a fact can go into. Deferred fields are visible but cannot be written yet (disabled or read-only)."""
     for document in documents:
         if document.error:
             raise ValueError(f"Cannot map an incomplete inspection: {document.frame_id}: {document.error}")
         for field in document.fields:
-            if field.fillable_now and field.kind not in {"password", "file"}:
+            if field.kind in {"password", "file"}:
+                continue
+            if field.fillable_now or (include_deferred and not field.hidden):
                 yield document.frame_id, field
 
 
+def is_multi_select(field: Field) -> bool:
+    return field.multiple and field.kind in {"select", "listbox", "combobox"}
+
+
 def describe_field(frame_id, field):
-    return " / ".join(filter(None, (frame_id, field.form, field.section, compact_field(field))))
+    description = " / ".join(filter(None, (frame_id, field.form, field.section, compact_field(field))))
+    return description if field.fillable_now else f"{description} | {DEFERRED_NOTE}"
 
 
 class FormRequestBuilder:
@@ -125,13 +137,14 @@ class FormRequestBuilder:
             raise ValueError("facts_per_request must be positive.")
         self.facts_per_request = facts_per_request
 
-    def build(self, documents: Sequence[DocumentFields], facts: Sequence[Fact], *, resolved_ids=()) -> list[dict]:
+    def build(self, documents: Sequence[DocumentFields], facts: Sequence[Fact], *, resolved_ids=(),
+              include_deferred: bool = False) -> list[dict]:
         single_fields = []
         multiple_fields = []
-        for frame_id, field in eligible_fields(documents):
+        for frame_id, field in eligible_fields(documents, include_deferred=include_deferred):
             if field.id in resolved_ids:
                 continue
-            fields = multiple_fields if field.multiple and field.kind in {"select", "listbox", "combobox"} else single_fields
+            fields = multiple_fields if is_multi_select(field) else single_fields
             description = describe_field(frame_id, field)
             # Identical labels in numbered sections can differ only by owner.
             # Point out facts naming this exact section; Jev still checks their meaning.

@@ -21,18 +21,21 @@ class SettingsTests(unittest.TestCase):
             config = settings.FormSettings.from_env()
         self.assertEqual(config.facts_path, settings.ROOT / "examples" / "facts.json")
         self.assertIsNone(config.open_link)
-        self.assertEqual(config.matching, settings.MatchingSettings(DEFAULT_CONCURRENCY, None, DEFAULT_TOKEN_BUDGET))
+        self.assertEqual(config.matching, settings.MatchingSettings("jev", "openai/gpt-6-luna", DEFAULT_CONCURRENCY, None, DEFAULT_TOKEN_BUDGET))
 
     def test_form_overrides(self):
         with env(FORM_URL="u", FORM_FACTS="f.json", FORM_OPEN_LINK="Automobile", FORM_CONCURRENCY="8",
                  FORM_FACTS_PER_REQUEST="50", FORM_TOKEN_BUDGET="20000"):
             config = settings.FormSettings.from_env()
         self.assertEqual(config.open_link, "Automobile")
-        self.assertEqual(config.matching, settings.MatchingSettings(8, 50, 20000))
+        self.assertEqual(config.matching, settings.MatchingSettings("jev", "openai/gpt-6-luna", 8, 50, 20000))
         with env(FORM_URL="u", FORM_FACTS="f.json", FORM_MULTI_SELECT_THRESHOLD="0.95",
                  FORM_SINGLE_VALUE_MIN_CONFIDENCE="0"):
             matching = settings.FormSettings.from_env().matching
         self.assertEqual((matching.multi_select_threshold, matching.single_value_min_confidence), (0.95, 0))
+        with env(FORM_URL="u", FORM_FACTS="f.json", FORM_MATCHER="LLM", FORM_LLM_MODEL="openai/gpt-6-luna-mini"):
+            matching = settings.FormSettings.from_env().matching
+        self.assertEqual((matching.matcher, matching.llm_model), ("llm", "openai/gpt-6-luna-mini"))
 
     def test_matching_settings_are_run_form_step_arguments(self):
         parameters = inspect.signature(run_form_step).parameters
@@ -45,6 +48,7 @@ class SettingsTests(unittest.TestCase):
             ({"FORM_URL": "u"}, "FORM_FACTS"),
             ({"FORM_URL": "u", "FORM_FACTS": "f", "FORM_CONCURRENCY": "many"}, "FORM_CONCURRENCY"),
             ({"FORM_URL": "u", "FORM_FACTS": "f", "FORM_CONCURRENCY": "0"}, "FORM_CONCURRENCY"),
+            ({"FORM_URL": "u", "FORM_FACTS": "f", "FORM_MATCHER": "gpt"}, "FORM_MATCHER"),
             ({"FORM_URL": "u", "FORM_FACTS": "f", "FORM_MULTI_SELECT_THRESHOLD": "1.5"}, "FORM_MULTI_SELECT_THRESHOLD"),
             ({"FORM_URL": "u", "FORM_FACTS": "f", "FORM_SINGLE_VALUE_MIN_CONFIDENCE": "high"},
              "FORM_SINGLE_VALUE_MIN_CONFIDENCE"),
@@ -64,6 +68,24 @@ class SettingsTests(unittest.TestCase):
         with env(FINDER_URL="u", FINDER_GOAL="g", FINDER_MEMORY="gpt"), self.assertRaisesRegex(ValueError, "FINDER_MEMORY"):
             settings.FinderSettings.from_env()
         self.assertEqual(set(settings.MEMORY_MODELS), set(MEMORY_SELECTORS))
+
+    def test_model_timeout(self):
+        with env():
+            self.assertEqual(settings.model_timeout(), 30)
+        with env(MODEL_TIMEOUT_SECONDS="120"):
+            self.assertEqual(settings.model_timeout(), 120)
+        with env(MODEL_TIMEOUT_SECONDS="0"), self.assertRaisesRegex(ValueError, "MODEL_TIMEOUT_SECONDS"):
+            settings.model_timeout()
+
+    def test_video_and_slow_motion(self):
+        with env():
+            self.assertIsNone(settings.browser_video_dir())
+            self.assertEqual(settings.browser_slow_mo(), 0)
+        with env(BROWSER_VIDEO_DIR="artifacts/videos", BROWSER_SLOW_MO_MS="300"):
+            self.assertEqual(settings.browser_video_dir(), settings.ROOT / "artifacts" / "videos")
+            self.assertEqual(settings.browser_slow_mo(), 300)
+        with env(BROWSER_SLOW_MO_MS="-1"), self.assertRaisesRegex(ValueError, "BROWSER_SLOW_MO_MS"):
+            settings.browser_slow_mo()
 
     def test_browser_watch(self):
         for value, expected in (("", False), ("true", True), ("ON", True), ("0", False)):

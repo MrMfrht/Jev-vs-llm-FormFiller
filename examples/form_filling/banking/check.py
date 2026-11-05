@@ -4,9 +4,11 @@ Run from the repository root with uv run python -m examples.form_filling.banking
 FORM_CONCURRENCY, FORM_FACTS_PER_REQUEST and FORM_TOKEN_BUDGET apply here too.
 """
 import json
+import logging
 from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
+from time import perf_counter
 
 from settings import MatchingSettings
 from open_router.client import OpenRouterError
@@ -35,16 +37,19 @@ def read_controls(page):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
         matching = MatchingSettings.from_env()
     except ValueError as exc:
         raise SystemExit(str(exc)) from None
-    with browser_page(watch_delay_ms=0) as page:
+    with browser_page() as page:
         page.goto((DIRECTORY / "form.html").resolve().as_uri())
         page.frame_locator("#broker").locator("input").wait_for()
+        started = perf_counter()
         try:
             run = run_form_step(page, read_facts(read_json("facts.json")), **asdict(matching))
-            print(f"Jev calls {run.decision_calls}, {run.input_tokens} input tokens, ${run.cost:.4f}; "
+            print(f"{matching.matcher} calls {run.model_calls}, {run.input_tokens} input + {run.output_tokens} output "
+                  f"tokens, ${run.cost:.4f}, {perf_counter() - started:.0f} s; "
                   f"app statuses {dict(Counter(r['status'] for r in run.records))}")
             print("Verified field-value selections by source:", dict(Counter(
                 r.get("match_method", "jev") for r in run.records if r["status"] == "matched")))

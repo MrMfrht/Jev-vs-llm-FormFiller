@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Checkout | benchmark fixture</title>
+<style>body{max-width:60rem;margin:2rem auto;font:15px/1.4 system-ui}fieldset{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.6rem;margin:.8rem 0}label{display:grid}[role=listbox]{border:1px solid #999;padding:.3rem}[role=option]{padding:.2rem .4rem;cursor:pointer}[role=option][aria-selected=true]{background:#cde}</style>
+<h1>Checkout</h1><p>Synthetic benchmark fixture. Not a real form.</p>
+<form id="checkout">
+<fieldset><legend>Contact</legend><label>Email<input type="email" id="email"></label><label>Phone<input type="tel" id="phone"></label></fieldset>
+<fieldset><legend>Shipping address</legend><label>Full name<input type="text" id="s_name"></label><label>Street address<input type="text" id="s_street"></label><label>Apartment, suite, etc.<input type="text" id="s_apt"></label><label>City<input type="text" id="s_city"></label><label>Postal code<input type="text" id="s_postal"></label><label>Country<select id="s_country" data-country="s_province"><option></option><option>Canada</option><option>United States</option><option>Germany</option></select></label><label>Province or state<select id="s_province" disabled><option></option></select></label><label>Delivery instructions<textarea id="s_notes"></textarea></label></fieldset>
+<fieldset><legend>Billing address</legend><label>Billing address is the same as shipping<input type="checkbox" id="b_same"></label><label>Full name<input type="text" id="b_name"></label><label>Street address<input type="text" id="b_street"></label><label>City<input type="text" id="b_city"></label><label>Postal code<input type="text" id="b_postal"></label><label>Country<select id="b_country" data-country="b_province"><option></option><option>Canada</option><option>United States</option><option>Germany</option></select></label><label>Province or state<select id="b_province" disabled><option></option></select></label></fieldset>
+<fieldset><legend>Delivery</legend><span id="methodLabel">Delivery method</span><button type="button" role="combobox" id="method" aria-labelledby="methodLabel" aria-controls="methodMenu" aria-expanded="false" data-check data-combobox>Choose…</button><div role="listbox" id="methodMenu" hidden><div role="option">Standard</div><div role="option">Express</div><div role="option">Overnight</div></div><label>Gift wrap<input type="checkbox" id="gift"></label><label>Gift message<textarea id="gift_msg"></textarea></label><label>Promo code<input type="text" id="promo"></label><label>Subscribe to the newsletter<input type="checkbox" id="news"></label></fieldset>
+<fieldset><legend>Payment</legend><label>Cardholder name<input type="text" id="card_name"></label><label>Card number<input type="text" id="card_no"></label><label>Expiry month<select id="exp_m"><option></option><option>01</option><option>02</option><option>03</option><option>04</option><option>05</option><option>06</option><option>07</option><option>08</option><option>09</option><option>10</option><option>11</option><option>12</option></select></label><label>Expiry year<select id="exp_y"><option></option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option><option>2031</option><option>2032</option></select></label><label>Security code<input type="password" id="cvv"></label></fieldset>
+</form>
+<script>
+const PROVINCES = {"Canada": ["British Columbia", "Ontario", "Quebec"], "United States": ["California", "Texas"], "Germany": ["Bavaria", "Berlin"]};
+for (const el of document.querySelectorAll('[data-country]')) {
+  const target = document.getElementById(el.dataset.country);
+  el.onchange = () => {
+    const items = PROVINCES[el.value] || [];
+    target.innerHTML = '<option></option>' + items.map(i => `<option>${i}</option>`).join('');
+    target.disabled = !items.length;
+  };
+}
+for (const el of document.querySelectorAll('[data-enables]')) {
+  el.onchange = () => { document.getElementById(el.dataset.enables).disabled = !el.checked; };
+}
+for (const box of document.querySelectorAll('[data-combobox]')) {
+  const menu = document.getElementById(box.getAttribute('aria-controls'));
+  box.onclick = () => { menu.hidden = false; box.setAttribute('aria-expanded', 'true'); };
+  for (const option of menu.children) option.onclick = () => {
+    for (const other of menu.children) other.setAttribute('aria-selected', String(other === option));
+    box.textContent = option.textContent; menu.hidden = true; box.setAttribute('aria-expanded', 'false');
+  };
+}
+for (const list of document.querySelectorAll('[data-multilistbox]')) {
+  for (const option of list.children) option.onclick = () =>
+    option.setAttribute('aria-selected', String(option.getAttribute('aria-selected') !== 'true'));
+}
+</script></html>

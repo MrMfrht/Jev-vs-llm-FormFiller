@@ -1,0 +1,29 @@
+{
+  "name": "Sofia Bergstrom",
+  "email": "sofia.b@example.se",
+  "org": "Lumen Studios",
+  "title": "Lead Engineer",
+  "country": "Sweden",
+  "profile": "https://sofia.example.se",
+  "ticket": "Standard",
+  "size": "XL",
+  "diet": [
+    "Vegetarian",
+    "Nut allergy"
+  ],
+  "sessions": [
+    "Workshop B: Security",
+    "Closing panel"
+  ],
+  "access": "Step-free access to the stage, please.",
+  "arrive": "2027-05-11",
+  "depart": "2027-05-14",
+  "hotel": true,
+  "guests": "1",
+  "e_name": "Erik Bergstrom",
+  "e_phone": "+46 70 555 0133",
+  "inv_company": "Lumen Studios AB",
+  "inv_vat": "SE556677889901",
+  "inv_address": "Vasagatan 10, 111 20 Stockholm",
+  "promo": ""
+}

@@ -1,0 +1,29 @@
+{
+  "p_name": "Omar Nakamura",
+  "p_dob": "1979-11-02",
+  "p_email": "omar.nakamura@example.com",
+  "p_phone": "+1 604 555 0188",
+  "p_sex": "Male",
+  "p_blood": "AB-",
+  "p_height": "178",
+  "p_weight": "81",
+  "p_allergies": [
+    "Penicillin",
+    "Shellfish"
+  ],
+  "p_meds": "Metformin 500 mg twice daily; Atorvastatin 20 mg nightly",
+  "p_smoker": false,
+  "e_name": "Yuki Nakamura",
+  "e_rel": "Spouse",
+  "e_phone": "+1 604 555 0190",
+  "e_email": "yuki.n@example.com",
+  "d_name": "Dr. Lena Moreau",
+  "d_clinic": "Cedar Ridge Clinic",
+  "d_phone": "+1 604 555 0101",
+  "i_has": true,
+  "i_provider": "Manulife",
+  "i_policy": "MNL-884201",
+  "i_group": "G-5521",
+  "c_treat": true,
+  "c_share": false
+}

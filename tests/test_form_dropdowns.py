@@ -1,5 +1,7 @@
+import json
 import os
 import unittest
+from unittest.mock import patch
 
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
@@ -43,6 +45,33 @@ class DropdownTests(unittest.TestCase):
         self.assertEqual(result.decision_calls, 0)
         self.assertTrue(self.page.locator("[name=enabled]").is_checked())
         self.assertEqual(self.page.locator("#ref").input_value(), "FX-12")
+
+    def test_dependent_select_is_filled_from_the_first_request(self):
+        self.page.set_content("""<label>Country<select id="c" onchange="p.disabled=!this.value;
+            p.innerHTML='<option></option><option>Nova Scotia</option>'"><option></option><option>Canada</option></select></label>
+            <label>Province<select id="p" disabled><option></option></select></label>
+            <label>Locked<input id="locked" readonly value="KEEP"></label>""")
+        facts = read_facts({"home country": "Canada", "home province": "Nova Scotia", "locked code": "X1"})
+        calls = []
+
+        def jev(payload):
+            calls.append(payload)
+            answers = {}
+            for key, question in payload["questions"].items():
+                label = payload["state"]["fields"][key]
+                fact = "q1" if "Country" in label else "q2" if "Province" in label else "q3"
+                answers[key] = {"choice": fact, "confidence": 0.95}
+            return {"answers": answers, "usage": {"input_tokens": 10, "output_tokens": 0, "cost": 0.0}}
+
+        with patch("form_filling.workflow.request_decision", side_effect=jev):
+            result = run_form_step(self.page, facts)
+        self.assertEqual(len(calls), 1)
+        self.assertIn("currently disabled", json.dumps(calls[0]["state"]["fields"]))
+        self.assertEqual(self.page.locator("#p").input_value(), "Nova Scotia")
+        self.assertEqual(self.page.locator("#locked").input_value(), "KEEP")
+        self.assertEqual([(r["field"].split("|")[1].strip()[:8], r["status"]) for r in result.records],
+                         [("Country", "matched"), ("Province", "matched"), ("Locked", "skipped")])
+        self.assertEqual(result.model_calls, 1)
 
     def test_long_numbered_list_and_change_event(self):
         opts = "".join(f"<option value='y{i}'>{i}</option>" for i in range(1900, 2031))

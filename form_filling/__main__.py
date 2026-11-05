@@ -1,6 +1,7 @@
 """Fill and verify the current step of FORM_URL from FORM_FACTS. Configure it in .env."""
 
 import json
+import logging
 import sys
 from collections import Counter
 from dataclasses import asdict
@@ -17,12 +18,13 @@ from .workflow import run_form_step
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
         config = FormSettings.from_env()
         facts = read_facts(json.loads(config.facts_path.read_text(encoding="utf-8-sig")))
     except (OSError, ValueError) as exc:
         raise SystemExit(str(exc)) from None
-    with browser_page(watch_delay_ms=0) as page:
+    with browser_page() as page:
         try:
             page.goto(config.url, wait_until="commit", timeout=45000)
             if config.open_link:
@@ -36,8 +38,8 @@ def main() -> None:
             raise SystemExit(str(exc)) from None
         print(json.dumps(result.records, ensure_ascii=True, indent=2))
         statuses = dict(Counter(record["status"] for record in result.records))
-        print(f"Jev calls: {result.decision_calls}, {result.input_tokens} input tokens, ${result.cost:.4f}. "
-              f"Statuses: {statuses}", file=sys.stderr)
+        print(f"{config.matching.matcher} calls: {result.model_calls}, {result.input_tokens} input + "
+              f"{result.output_tokens} output tokens, ${result.cost:.4f}. Statuses: {statuses}", file=sys.stderr)
 
 
 if __name__ == "__main__":

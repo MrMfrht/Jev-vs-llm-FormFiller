@@ -1,0 +1,21 @@
+{
+  "applicant full name": "Dalia Haddad",
+  "applicant email": "dalia.haddad@example.com",
+  "applicant phone": "+1 416 555 0133",
+  "applicant linkedin profile": "https://linkedin.example/in/daliahaddad",
+  "applicant portfolio website": "https://dalia.example.org",
+  "position applied for": "Data Analyst",
+  "earliest start date": "2026-12-01",
+  "desired annual salary CAD": 95000,
+  "years of professional experience": 6,
+  "authorized to work in Canada": "Yes",
+  "willing to relocate": true,
+  "how the applicant heard about the job": "LinkedIn",
+  "most recent employer": "Northwind Analytics",
+  "most recent job title": "Senior Analyst",
+  "cover letter": "I build dashboards that teams actually use. At Northwind I cut report turnaround from a week to a day by replacing hand-made spreadsheets with a shared data model.",
+  "employer before Northwind": "Cedar Ridge Clinic",
+  "job title before Northwind": "Analyst",
+  "applicant nickname": "Dee",
+  "applicant preferred pronouns": "she/her"
+}

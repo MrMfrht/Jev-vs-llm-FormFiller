@@ -11,14 +11,14 @@ from .requests import DEFAULT_TOKEN_BUDGET, MAX_FACT_CHOICES, NO_MATCH, Fact, bu
 
 DEFAULT_CONCURRENCY = 4
 # A multi-select fact is chosen at or above this yes-probability.
-DEFAULT_MULTI_SELECT_THRESHOLD = 0.8
+DEFAULT_MULTI_SELECT_THRESHOLD = 0.6
 # Below this, a single-value choice is reported instead of written.
 DEFAULT_SINGLE_VALUE_MIN_CONFIDENCE = 0.6
 
 
-def exact_name_matches(documents, facts):
+def exact_name_matches(documents, facts, *, include_deferred: bool = False):
     """Only bypass inference for a literal name unique on both sides."""
-    fields = list(eligible_fields(documents))
+    fields = list(eligible_fields(documents, include_deferred=include_deferred))
     field_counts = Counter(field.name for _, field in fields)
     fact_counts = Counter(fact.name for fact in facts)
     unique_facts = {fact.name: fact for fact in facts if fact_counts[fact.name] == 1}

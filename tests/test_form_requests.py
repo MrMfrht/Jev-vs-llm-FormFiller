@@ -71,6 +71,17 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(estimated_input_tokens(single) - base(single), CHOICE_OPTION_TOKENS * 2 * 10)
         self.assertEqual(estimated_input_tokens(multi), base(multi))
 
+    def test_deferred_fields_are_included_only_on_request(self):
+        fields = [field(1), field(2, fillable_now=False, disabled=True, label="Branch"),
+                  field(3, fillable_now=False, hidden=True, label="Other step")]
+        facts = read_facts({"year": 2025})
+        [request] = FormRequestBuilder().build([doc(*fields)], facts)
+        self.assertEqual(list(request["questions"]), ["frame1.f1"])
+        [request] = FormRequestBuilder().build([doc(*fields)], facts, include_deferred=True)
+        self.assertEqual(list(request["questions"]), ["frame1.f1", "frame1.f2"])
+        self.assertIn("currently disabled", request["state"]["fields"]["frame1.f2"])
+        self.assertNotIn("currently disabled", request["state"]["fields"]["frame1.f1"])
+
     def test_reuse_competing_groups_and_unused_field(self):
         facts = read_facts({"contact.email": "alex@example.com", "work.email": "work@example.com"})
         requests = FormRequestBuilder(facts_per_request=1).build([doc(field(1), field(2), field(3))], facts)
@@ -117,9 +128,9 @@ class RequestTests(unittest.TestCase):
         yes = {"q1": 0.97, "q2": 0.7, "q3": 0.05}
         def decide(req):
             return {"answers": {key: {"noul": yes[key.partition(":")[2]]} for key in req["questions"]}}
-        result = match_fields(requests, facts, send=decide)
+        result = match_fields(requests, facts, multi_select_threshold=0.8, send=decide)
         self.assertEqual([(r["value"], r["confidence"]) for r in result], [("skiing", 0.97)])
-        result = match_fields(requests, facts, multi_select_threshold=0.6, send=decide)
+        result = match_fields(requests, facts, send=decide)
         self.assertEqual([r["value"] for r in result], ["skiing", "reading"])
         result = match_fields(requests, facts, multi_select_threshold=0.99, send=decide)
         self.assertEqual([r["status"] for r in result], ["unmatched"])
