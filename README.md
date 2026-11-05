@@ -9,6 +9,8 @@ Two "brains" can do the matching, and you pick one with a setting:
 
 Whichever you choose, the values typed into the form are always **exact copies of your facts**. Nothing is invented or reworded.
 
+How each brain works, and why Jev costs more, is explained in plain words in [docs/architecture.md](docs/architecture.md).
+
 ## Contents
 
 1. [Setup](#setup)
@@ -122,14 +124,16 @@ Each form was filled once by each brain and scored against the expected values. 
 | Form | Fields | Jev | | | LLM | | |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | | | **correct** | **cost** | **time** | **correct** | **cost** | **time** |
-| Tricentis Automobile | 8 | 8/8 | $0.0002 | ~4 s | 8/8 | $0.0002 | ~3 s |
-| Job application | 16 | 16/16 | $0.0004 | 2 s | 16/16 | $0.0003 | 6 s |
-| Medical intake | 24 | 24/24 | $0.0009 | 3 s | 24/24 | $0.0004 | 6 s |
-| Checkout | 27 | 27/27 | $0.0008 | 3 s | 27/27 | $0.0004 | 6 s |
-| Visa application | 38 | **31/38** | $0.0019 | 3 s | 38/38 | $0.0006 | 7 s |
-| Conference registration | 21 | 21/21 | $0.0008 | 2 s | 21/21 | $0.0004 | 6 s |
-| Banking | 310 | 310/310 | $0.0262 | 12 s | 310/310 | $0.0016 | 16 s |
-| **Total** | **444** | **437/444 (98.4%)** | **$0.0312** | **29 s** | **444/444 (100%)** | **$0.0039** | **50 s** |
+| Tricentis Automobile | 8 | 8/8 | $0.0002 | ~4 s | 8/8 | $0.0002 | **~3 s** |
+| Job application | 16 | 16/16 | $0.0004 | **2 s** | 16/16 | **$0.0003** | 6 s |
+| Medical intake | 24 | 24/24 | $0.0009 | **3 s** | 24/24 | **$0.0004** | 6 s |
+| Checkout | 27 | 27/27 | $0.0008 | **3 s** | 27/27 | **$0.0004** | 6 s |
+| Visa application | 38 | 31/38 | $0.0019 | **3 s** | **38/38** | **$0.0006** | 7 s |
+| Conference registration | 21 | 21/21 | $0.0008 | **2 s** | 21/21 | **$0.0004** | 6 s |
+| Banking | 310 | 310/310 | $0.0262 | **12 s** | 310/310 | **$0.0016** | 16 s |
+| **Total** | 444 | 437/444 (98.4%) | $0.0312 | **29 s** | **444/444 (100%)** | **$0.0039** | 50 s |
+
+Bold marks the better result for each measure (correct, cost, time). Ties are left plain.
 
 Times are from a round in which every request was answered. When the connection to OpenRouter drops a request, it is sent again after `MODEL_TIMEOUT_SECONDS`, and the run takes that much longer.
 
