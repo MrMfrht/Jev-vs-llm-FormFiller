@@ -34,12 +34,13 @@ def browser_page(*, watch: bool | None = None, watch_delay_ms: int | None = None
             else:
                 page = browser.new_page(no_viewport=watch)
             yield page
-            if watch and sys.stdin.isatty() and not page.is_closed():
-                with suppress(EOFError):
-                    input("Run finished. Press Enter to close the browser. ")
             if video_dir and not page.is_closed():
+                # Stop the recording as soon as the run ends, so the video doesn't include the pause below.
                 path = page.video.path()
                 page.close()
                 print(f"Video saved: {path}", file=sys.stderr, flush=True)
+            if watch and sys.stdin.isatty() and not page.is_closed():
+                with suppress(EOFError):
+                    input("Run finished. Press Enter to close the browser. ")
         finally:
             browser.close()
